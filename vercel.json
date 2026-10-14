@@ -1,12 +1,9 @@
 {
-  "build": {
-    "env": {
-      "PYTHON_VERSION": "3.11"
-    }
-  },
+  "version": 2,
   "functions": {
     "api/*.py": {
-      "runtime": "python3.11",
+      "runtime": "@vercel/python@4.0.0",
+      "memory": 1024,
       "maxDuration": 60
     }
   },
