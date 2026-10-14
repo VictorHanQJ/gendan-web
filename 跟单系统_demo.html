@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服装跟单辅助系统 - 演示原型</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- SheetJS 用于前端导出Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        warn: '#FFAA00',
+                        danger: '#F53F3F',
+                        success: '#00B42A'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+<div class="min-h-screen flex flex-col">
+    <!--顶部导航栏-->
+    <header class="bg-white shadow px-6 py-3 flex items-center justify-between">
+        <div class="text-xl font-bold text-primary">跟单智表｜服装跟单辅助系统</div>
+        <div class="space-x-3">
+            <button id="btnUpload" class="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90">
+                <i class="fa fa-upload mr-1"></i>上传跟单Excel
+            </button>
+            <button id="btnExport" class="border border-primary text-primary px-4 py-2 rounded hover:bg-blue-50">
+                <i class="fa fa-download mr-1"></i>导出报表
+            </button>
+        </div>
+    </header>
+    <main class="flex flex-1 overflow-hidden">
+        <!--筛选侧边栏-->
+        <aside class="w-64 bg-white shadow p-4 overflow-y-auto border-r">
+            <h3 class="font-semibold mb-3 text-base">🔍多条件筛选</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm text-gray-600">PO号</label>
+                    <input type="text" id="filterPo" class="w-full border rounded px-2 py-1.5 mt-1 text-sm" placeholder="输入PO号">
+                </div>
+                <div>
+                    <label class="text-sm text-gray-600">供应商</label>
+                    <select id="filterVendor" class="w-full border rounded px-2 py-1.5 mt-1 text-sm">
+                        <option value="">全部</option>
+                        <option>JIANGXI VATICA CO LTD</option>
+                        <option>DONGYANG YILONG GARMENTS CO LTD</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-600">交期区间</label>
+                    <input type="date" id="filterStart" class="w-full border rounded px-2 py-1.5 mt-1 text-sm">
+                    <div class="text-center text-xs my-1">~</div>
+                    <input type="date" id="filterEnd" class="w-full border rounded px-2 py-1.5 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm text-gray-600">风险标签</label>
+                    <div class="space-y-1 text-sm mt-1">
+                        <label class="flex items-center gap-1"><input type="checkbox" id="chkWarn">交期预警</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" id="chkOver">溢装/短装超标</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" id="chkSpecial">特殊工艺备注</label>
+                    </div>
+                </div>
+                <button id="btnFilter" class="w-full bg-primary text-white py-1.5 rounded mt-2">执行筛选</button>
+                <button id="btnReset" class="w-full border py-1.5 rounded mt-1">重置条件</button>
+            </div>
+        </aside>
+        <!--主内容区域-->
+        <section class="flex-1 flex flex-col overflow-hidden">
+            <div class="bg-white px-4 py-2 border-b flex items-center gap-3">
+                <div class="font-medium">数据视图：</div>
+                <button id="viewTable" class="px-3 py-1 rounded bg-primary text-white text-sm">表格视图</button>
+                <button id="viewCard" class="px-3 py-1 rounded bg-gray-200 text-sm">卡片视图</button>
+                <div class="flex-1"></div>
+                <div class="text-sm text-gray-500">共 <span id="totalCount" class="font-medium">0</span> 条款式记录</div>
+            </div>
+            <!--表格视图区域【完全沿用你原来的表格表头样式】-->
+            <div id="tablePanel" class="flex-1 overflow-auto p-2">
+                <table class="w-full text-sm bg-white">
+                    <thead class="bg-gray-100 sticky top-0">
+                    <tr>
+                        <th class="border px-2 py-2 text-left">款号</th>
+                        <th class="border px-2 py-2 text-left">PO号</th>
+                        <th class="border px-2 py-2 text-left">颜色</th>
+                        <th class="border px-2 py-2 text-left">订单总数量</th>
+                        <th class="border px-2 py-2 text-left">交期</th>
+                        <th class="border px-2 py-2 text-left">供应商</th>
+                        <th class="border px-2 py-2 text-left">溢装比例</th>
+                        <th class="border px-2 py-2 text-left">风险标签</th>
+                        <th class="border px-2 py-2 text-left">样图预览</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+            <!--卡片视图【样式100%沿用你的demo】-->
+            <div id="cardPanel" class="flex‑1 overflow‑auto p‑4 hidden">
+                <div id="cardContainer" class="grid grid‑cols‑1 md:grid‑cols‑2 xl:grid‑cols‑3 gap‑4">
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+//存储解析后全部跟单数据
+let tableData = [];
+let showData = [...tableData];
+
+//行背景色判断（和原来demo颜色保持一致：交期黄色，异常红色）
+function getRowClass(tag){
+    if(!tag) return "";
+    if(tag.includes("交期预警")) return "bg-amber-50";
+    if(tag.includes("溢装")||tag.includes("短装")) return "bg-red-50";
+    return "";
+}
+
+//渲染表格
+function renderTable(list){
+    const dom = document.getElementById("tableBody");
+    dom.innerHTML = "";
+    list.forEach(row=>{
+        const tr = document.createElement('tr');
+        tr.className = getRowClass(row.风险标签);
+        let imgHtml = "";
+        if(row["图片url"]){
+            imgHtml = `<img src="${row["图片url"]}" class="w-10 h-10 rounded cursor-pointer" alt="样卡">`;
+        }else{
+            imgHtml = `<span class="text-gray‑400">无图</span>`;
+        }
+        tr.innerHTML = `
+        <td class="border px‑2 py‑1">${row.款号||""}</td>
+        <td class="border px‑2 py‑1">${row.PO号||""}</td>
+        <td class="border px‑2 py‑1">${row.颜色||""}</td>
+        <td class="border px‑2 py‑1">${row.订单总数量||0}</td>
+        <td class="border px‑2 py‑1">${row.交期||""}</td>
+        <td class="border px‑2 py‑1">${row.供应商||""}</td>
+        <td class="border px‑2 py‑1">-</td>
+        <td class="border px‑2 py‑1">${row.风险标签||"正常"}</td>
+        <td class="border px‑2 py‑1">${imgHtml}</td>
+        `;
+        dom.appendChild(tr);
+    })
+    document.getElementById("totalCount").innerText = list.length;
+}
+
+//渲染卡片
+function renderCard(list){
+    const container = document.getElementById("cardContainer");
+    container.innerHTML = "";
+    list.forEach(row=>{
+        const div = document.createElement('div');
+        const cls = getRowClass(row.风险标签);
+        let borderCls = "border-gray-200";
+        if(cls==="bg-amber-50") borderCls="border-warn/40";
+        if(cls==="bg-red-50") borderCls="border-danger/40";
+        div.className = `bg-white border-2 ${borderCls} rounded p-3 shadow`;
+        let cardImg = "";
+        if(row["图片url"]){
+            cardImg = `<img src="${row["图片url"]}" class="w‑20 h‑20 rounded object‑cover">`;
+        }else{
+            cardImg = `<div class="w‑20 h‑20 bg‑gray‑100 flex items‑center justify‑center text‑xs text‑gray‑400">无样图</div>`;
+        }
+        div.innerHTML=`
+        <div class="flex gap‑3">
+            ${cardImg}
+            <div class="flex‑1">
+                <div class="font‑bold">${row.款号||""}</div>
+                <div class="text‑sm text‑gray‑600">PO:${row.PO号||""}｜颜色:${row.颜色||""}</div>
+                <div class="text‑sm mt‑1">订单数量：${row.订单总数量||0}</div>
+                <div class="text‑sm">交期：${row.交期||""} <span>${row.风险标签||"正常"}</span></div>
+                <div class="text‑sm">供应商：${row.供应商||""}</div>
+            </div>
+        </div>
+        <div class="mt‑2 text‑xs text‑gray‑500 border‑t pt‑2">工艺备注：${(row.工艺备注||"无").substring(0,130)}</div>
+        `;
+        container.appendChild(div);
+    })
+}
+
+//视图切换逻辑【完全复用原来demo交互】
+const btnTable = document.getElementById('viewTable');
+const btnCard = document.getElementById('viewCard');
+const tablePanel = document.getElementById('tablePanel');
+const cardPanel = document.getElementById('cardPanel');
+
+btnTable.onclick = function(){
+    tablePanel.classList.remove('hidden');
+    cardPanel.classList.add('hidden');
+    btnTable.classList.add('bg-primary','text-white');
+    btnTable.classList.remove('bg-gray-200');
+    btnCard.classList.remove('bg-primary','text-white');
+    btnCard.classList.add('bg-gray-200');
+}
+btnCard.onclick = function(){
+    tablePanel.classList.add('hidden');
+    cardPanel.classList.remove('hidden');
+    btnCard.classList.add('bg-primary','text-white');
+    btnCard.classList.remove('bg-gray-200');
+    btnTable.classList.remove('bg-primary','text-white');
+    btnTable.classList.add('bg-gray-200');
+}
+
+// ============【核心：Excel上传逻辑】================
+const btnUpload = document.getElementById("btnUpload");
+let fileInput = document.createElement("input");
+fileInput.type="file";
+fileInput.accept=".xlsx";
+fileInput.style.display="none";
+document.body.appendChild(fileInput);
+
+btnUpload.addEventListener("click",()=>{
+    fileInput.click();
+})
+
+fileInput.onchange = async function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    alert("正在解析Excel跟单文件，请稍候，大表格会耗时数秒~几十秒");
+    try{
+        const buf = await file.arrayBuffer();
+        const uint8 = new Uint8Array(buf);
+        const hexStr = Array.from(uint8).map(b=>b.toString(16).padStart(2,"0")).join("");
+        const resp = await fetch("/api/parse_excel",{
+            method:"POST",
+            body:hexStr
+        });
+        const jsonRet = await resp.json();
+        if(jsonRet.code!==0){
+            alert("解析出错："+jsonRet.error);
+            return;
+        }
+        tableData = jsonRet.data;
+        showData = [...tableData];
+        renderTable(showData);
+        renderCard(showData);
+        alert(`解析完成，一共${tableData.length}条款式`);
+    }catch(err){
+        alert("网络/解析异常："+err.message);
+    }
+}
+
+// ==========【新增：导出Excel报表功能】========
+document.getElementById("btnExport").addEventListener("click",()=>{
+    if(!showData || showData.length===0){
+        alert("暂无数据，无法导出");
+        return;
+    }
+    const ws = XLSX.utils.json_to_sheet(showData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"跟单解析结果");
+    XLSX.writeFile(wb,"服装跟单解析报表.xlsx");
+})
+
+document.getElementById("btnFilter").addEventListener("click",()=>{
+    alert("原型筛选UI已完成，业务版本需要开发JS筛选逻辑");
+})
+document.getElementById("btnReset").addEventListener("click",()=>{
+    showData = [...tableData];
+    renderTable(showData);
+    renderCard(showData);
+})
+
+//初始化空渲染
+renderTable(showData);
+renderCard(showData);
+</script>
+</body>
+</html>
+<!-- （注：内容由AI生成） -->
